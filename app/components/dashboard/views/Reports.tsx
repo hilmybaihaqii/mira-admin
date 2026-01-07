@@ -1,6 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import React, { useState, useEffect, useCallback } from 'react';
-import { Flag, Trash2, Search, CheckCircle, MessageSquareWarning, Loader2, RefreshCw, FileText, ShieldAlert } from 'lucide-react';
+import { Flag, Trash2, Search, CheckCircle, Loader2, RefreshCw, FileText, ShieldAlert, User, AlertTriangle } from 'lucide-react';
 import DeleteModal from '../shared/DeleteModal';
 
 // --- INTERFACES ---
@@ -113,10 +113,12 @@ export default function Reports() {
         if (!dataContent.success) throw new Error(dataContent.message || "Failed to delete post");
 
         // 2. Hapus Laporan (Clean up)
-        await fetch(`${baseUrl}/api/admin/community/reports/${selectedReport.id}`, {
+        const resCleanup = await fetch(`${baseUrl}/api/admin/community/reports/${selectedReport.id}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
+        
+        if (!resCleanup.ok) console.warn("Report cleanup might have failed");
 
       } else {
         // DISMISS REPORT
@@ -143,17 +145,23 @@ export default function Reports() {
     }
   };
 
+  // Helper: Format Date
   const formatDate = (dateString: string) => {
     if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('en-GB', {
-        day: 'numeric', month: 'short', year: 'numeric'
-    });
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
   return (
     <div className="space-y-8 animate-[fade-in_0.5s_ease-out]">
       
-      {/* 1. HERO HEADER */}
+      {/* 1. HERO HEADER (Matches Community Style) */}
       <div className="relative overflow-hidden rounded-3xl bg-slate-900 p-10 text-white shadow-2xl shadow-indigo-900/20">
         <div className="absolute top-0 right-0 -mr-20 -mt-20 h-80 w-80 rounded-full bg-rose-500/20 blur-3xl"></div>
         <div className="absolute bottom-0 left-0 -ml-20 -mb-20 h-60 w-60 rounded-full bg-indigo-500/10 blur-3xl"></div>
@@ -162,17 +170,17 @@ export default function Reports() {
             <div className="space-y-2">
                 <div className="flex items-center gap-3">
                     <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 shadow-inner">
-                        <Flag className="h-6 w-6 text-rose-400" />
+                        <Flag className="h-6 w-6 text-rose-300" />
                     </div>
                     <h2 className="text-3xl font-bold tracking-tight text-white">Reported Content</h2>
                 </div>
                 <p className="max-w-xl text-slate-300 text-sm leading-relaxed">
-                    Review flagged content from the community. Take action to delete inappropriate posts or dismiss false reports to keep the platform safe.
+                    Review flagged content. Take action to maintain community standards by removing violations or dismissing false reports.
                 </p>
             </div>
             
             <div className="flex items-center gap-3 rounded-2xl bg-white/5 px-5 py-3 backdrop-blur-sm border border-white/10">
-                <MessageSquareWarning className="text-rose-400" size={18} />
+                <ShieldAlert className="text-rose-400" size={20} />
                 <div className="text-left">
                     <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Pending Issues</p>
                     <p className="text-lg font-bold text-white">{reports.length} Reports</p>
@@ -183,8 +191,9 @@ export default function Reports() {
 
       {/* 2. TOOLBAR (SEARCH & REFRESH) */}
       <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+        {/* Search */}
         <div className="relative w-full md:w-96 group">
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-rose-500 transition-colors">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-rose-500 transition-colors pointer-events-none">
                 <Search size={20} />
             </div>
             <input 
@@ -196,9 +205,11 @@ export default function Reports() {
             />
         </div>
 
+        {/* Refresh Button */}
         <button 
             onClick={fetchReports} 
-            className="p-3.5 text-slate-500 bg-white border border-slate-200 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 rounded-2xl transition-all shadow-sm self-end md:self-auto"
+            disabled={isLoading}
+            className="p-3.5 text-slate-500 bg-white border border-slate-200 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 rounded-2xl transition-all shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
             title="Refresh Reports"
         >
             <RefreshCw size={18} className={isLoading ? "animate-spin" : ""} />
@@ -207,7 +218,7 @@ export default function Reports() {
 
       {/* 3. TABLE DATA */}
       <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/40">
-        <div className="overflow-x-auto min-h-100">
+        <div className="overflow-x-auto min-h-75">
             <table className="w-full text-left border-collapse">
                 <thead>
                     <tr className="bg-slate-50/80 text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-100">
@@ -224,7 +235,7 @@ export default function Reports() {
                             <td colSpan={5} className="px-6 py-20 text-center">
                                 <div className="flex flex-col items-center justify-center gap-3 text-slate-400">
                                     <Loader2 size={32} className="animate-spin text-rose-500" />
-                                    <p className="text-sm font-medium">Loading pending reports...</p>
+                                    <p className="text-sm font-medium">Loading reports...</p>
                                 </div>
                             </td>
                         </tr>
@@ -236,7 +247,7 @@ export default function Reports() {
                                         <CheckCircle size={32} />
                                     </div>
                                     <p className="text-lg font-bold text-slate-600">All Clear!</p>
-                                    <p className="text-sm">There are no pending reports at the moment.</p>
+                                    <p className="text-sm">There are no pending reports matching your criteria.</p>
                                 </div>
                             </td>
                         </tr>
@@ -245,7 +256,7 @@ export default function Reports() {
                             <tr key={report.id} className="group hover:bg-slate-50/60 transition-colors duration-200">
                                 {/* COLUMN 1: REPORTER */}
                                 <td className="px-8 py-5 align-top w-64">
-                                    <div className="flex items-center gap-4">
+                                    <div className="flex items-start gap-4">
                                         <div className="relative h-10 w-10 min-w-10 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
                                             <img 
                                                 src={report.reporter?.avatar_url || `https://ui-avatars.com/api/?name=${report.reporter?.full_name || 'User'}`} 
@@ -255,27 +266,29 @@ export default function Reports() {
                                         </div>
                                         <div>
                                             <p className="text-sm font-bold text-slate-800 line-clamp-1">{report.reporter?.full_name || 'Anonymous'}</p>
-                                            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Reporter</p>
+                                            <p className="text-[10px] text-slate-400 line-clamp-1 mb-1.5">{report.reporter?.email}</p>
+                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border bg-slate-100 text-slate-500 border-slate-200">
+                                                <User size={9} /> Reporter
+                                            </span>
                                         </div>
                                     </div>
                                 </td>
                                 
-                                {/* COLUMN 2: CONTENT PREVIEW (CARD STYLE) */}
+                                {/* COLUMN 2: CONTENT PREVIEW */}
                                 <td className="px-6 py-5 align-top max-w-sm">
                                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/60 group-hover:border-slate-300 transition-colors">
                                         {/* Original Author */}
-                                        <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-200/50">
-                                            <div className="h-5 w-5 rounded-full overflow-hidden bg-slate-200">
+                                        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200/50">
+                                            <div className="h-5 w-5 rounded-full overflow-hidden bg-slate-200 shrink-0">
                                                 <img 
                                                     src={report.post?.author?.avatar_url || `https://ui-avatars.com/api/?name=${report.post?.author?.full_name || 'U'}`} 
                                                     alt="Author" 
                                                     className="w-full h-full object-cover"
                                                 />
                                             </div>
-                                            <span className="text-xs font-bold text-slate-600 truncate">
+                                            <span className="text-xs font-bold text-slate-600 truncate max-w-30">
                                                 {report.post?.author?.full_name || 'Unknown Author'}
                                             </span>
-                                            <span className="text-[10px] text-slate-400 ml-auto">Original Author</span>
                                         </div>
                                         
                                         {/* Content Text */}
@@ -286,7 +299,7 @@ export default function Reports() {
                                         {/* Attachment Indicator */}
                                         {report.post?.image_url && (
                                             <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500 bg-white px-2 py-1 rounded-lg border border-slate-100 w-fit">
-                                                <FileText size={12} /> Contains Image Attachment
+                                                <FileText size={12} className="text-rose-400" /> Image Attachment
                                             </div>
                                         )}
                                     </div>
@@ -294,15 +307,17 @@ export default function Reports() {
 
                                 {/* COLUMN 3: REASON */}
                                 <td className="px-6 py-5 align-top">
-                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 border border-rose-100">
-                                        <ShieldAlert size={12} />
+                                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 border border-rose-100">
+                                        <AlertTriangle size={12} />
                                         {report.reason}
                                     </div>
                                 </td>
 
                                 {/* COLUMN 4: DATE */}
-                                <td className="px-6 py-5 text-sm font-medium text-slate-500 align-top whitespace-nowrap">
-                                     {formatDate(report.created_at)}
+                                <td className="px-6 py-5 align-top whitespace-nowrap">
+                                     <div className="text-sm font-medium text-slate-500">
+                                        {formatDate(report.created_at)}
+                                     </div>
                                 </td>
 
                                 {/* COLUMN 5: ACTIONS */}
@@ -311,7 +326,7 @@ export default function Reports() {
                                         {/* DISMISS BUTTON */}
                                         <button 
                                             onClick={() => confirmAction(report, 'DISMISS_REPORT')}
-                                            className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 hover:text-emerald-700 rounded-xl transition-all border border-emerald-100 group/ok"
+                                            className="p-2.5 text-emerald-600 bg-white border border-slate-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 rounded-xl transition-all shadow-sm group/ok"
                                             title="Dismiss (Keep Content)"
                                         >
                                             <CheckCircle size={18} className="group-hover/ok:scale-110 transition-transform" />
@@ -320,7 +335,7 @@ export default function Reports() {
                                         {/* DELETE CONTENT BUTTON */}
                                         <button 
                                             onClick={() => confirmAction(report, 'DELETE_CONTENT')}
-                                            className="p-2 text-rose-500 bg-rose-50 hover:bg-rose-100 hover:text-rose-700 rounded-xl transition-all border border-rose-100 group/del"
+                                            className="p-2.5 text-rose-500 bg-white border border-slate-200 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 rounded-xl transition-all shadow-sm group/del"
                                             title="Delete Content (Valid Report)"
                                         >
                                             <Trash2 size={18} className="group-hover/del:scale-110 transition-transform" />

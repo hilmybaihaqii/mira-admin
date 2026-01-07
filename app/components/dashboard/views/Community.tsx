@@ -1,9 +1,9 @@
 /* eslint-disable @next/next/no-img-element */
 import React, { useState, useEffect, useCallback } from 'react';
-import { MessagesSquare, Trash2, Search, Filter, MessageCircle, Loader2, RefreshCw, FileImage, CornerDownRight } from 'lucide-react';
+import { MessagesSquare, Trash2, Search, Filter, MessageCircle, Loader2, RefreshCw, FileImage, CornerDownRight, Calendar } from 'lucide-react';
 import DeleteModal from '../shared/DeleteModal';
 
-// --- INTERFACES SESUAI API ---
+// --- INTERFACES ---
 interface Author {
   email: string;
   full_name: string;
@@ -181,16 +181,18 @@ export default function Community() {
     if (diffInSeconds < 60) return 'Just now';
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-    return date.toLocaleDateString();
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
   return (
-    <div className="space-y-8 animate-[fade-in_0.5s_ease-out]">
+    // PENTING: Padding ditambahkan di sini agar selaras dengan ContentWrapper di halaman lain
+    <div className="p-6 md:p-8 space-y-8 animate-[fade-in_0.5s_ease-out]">
       
       {/* 1. HERO HEADER */}
       <div className="relative overflow-hidden rounded-3xl bg-slate-900 p-10 text-white shadow-2xl shadow-indigo-900/20">
-        <div className="absolute top-0 right-0 -mr-20 -mt-20 h-80 w-80 rounded-full bg-indigo-500/20 blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 h-60 w-60 rounded-full bg-violet-500/10 blur-3xl"></div>
+        {/* Decorative Blobs (Indigo & Violet theme) */}
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 h-80 w-80 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 h-60 w-60 rounded-full bg-violet-500/10 blur-3xl pointer-events-none"></div>
         
         <div className="relative z-10 flex flex-col justify-between gap-6 md:flex-row md:items-end">
             <div className="space-y-2">
@@ -201,12 +203,12 @@ export default function Community() {
                     <h2 className="text-3xl font-bold tracking-tight text-white">Community Feed</h2>
                 </div>
                 <p className="max-w-xl text-slate-300 text-sm leading-relaxed">
-                    Overview of all user-generated content. Monitor, filter, and manage posts and comments.
+                    Overview of all user-generated content. Monitor, filter, and manage posts and comments to ensure a healthy community.
                 </p>
             </div>
             
-            <div className="flex items-center gap-3 rounded-2xl bg-white/5 px-5 py-3 backdrop-blur-sm border border-white/10">
-                <Filter className="text-indigo-300" size={18} />
+            <div className="flex items-center gap-3 rounded-2xl bg-white/5 px-5 py-3 backdrop-blur-sm border border-white/10 w-fit">
+                <Filter className="text-indigo-300" size={20} />
                 <div className="text-left">
                     <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Total Content</p>
                     <p className="text-lg font-bold text-white">{feedItems.length} Items</p>
@@ -219,7 +221,7 @@ export default function Community() {
       <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
         {/* Search */}
         <div className="relative w-full md:w-96 group">
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors pointer-events-none">
                 <Search size={20} />
             </div>
             <input 
@@ -235,7 +237,8 @@ export default function Community() {
             {/* Refresh Button */}
             <button 
                 onClick={fetchCommunityData} 
-                className="p-3.5 text-slate-500 bg-white border border-slate-200 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 rounded-2xl transition-all shadow-sm"
+                disabled={isLoading}
+                className="p-3.5 text-slate-500 bg-white border border-slate-200 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 rounded-2xl transition-all shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
                 title="Refresh Feed"
             >
                 <RefreshCw size={18} className={isLoading ? "animate-spin" : ""} />
@@ -276,7 +279,7 @@ export default function Community() {
                 <tbody className="divide-y divide-slate-100">
                     {isLoading ? (
                         <tr>
-                            <td colSpan={5} className="px-6 py-20 text-center">
+                            <td colSpan={5} className="px-6 py-24 text-center">
                                 <div className="flex flex-col items-center justify-center gap-3 text-slate-400">
                                     <Loader2 size={32} className="animate-spin text-indigo-500" />
                                     <p className="text-sm font-medium">Loading community feed...</p>
@@ -285,7 +288,7 @@ export default function Community() {
                         </tr>
                     ) : filteredItems.length === 0 ? (
                         <tr>
-                            <td colSpan={5} className="px-6 py-20 text-center">
+                            <td colSpan={5} className="px-6 py-24 text-center">
                                 <div className="flex flex-col items-center justify-center text-slate-400">
                                     <div className="p-4 bg-slate-50 rounded-full mb-3">
                                         <MessagesSquare size={32} className="opacity-40" />
@@ -318,6 +321,7 @@ export default function Community() {
                                                 ? 'bg-indigo-50 text-indigo-600 border-indigo-100' 
                                                 : 'bg-slate-100 text-slate-600 border-slate-200'
                                             }`}>
+                                                {item.type === 'Post' ? <FileImage size={9} className="mr-1" /> : <MessageCircle size={9} className="mr-1" />}
                                                 {item.type}
                                             </span>
                                         </div>
@@ -344,27 +348,27 @@ export default function Community() {
                                     {/* Image Preview for Post */}
                                     {item.type === 'Post' && item.image_url ? (
                                         <div className="relative group/img w-fit">
-                                            <div className="relative h-20 w-32 rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
+                                            <div className="relative h-20 w-32 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 shadow-sm">
                                                 <img 
                                                     src={item.image_url} 
                                                     alt="Post attachment" 
-                                                    className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300"
+                                                    className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-500"
                                                 />
                                             </div>
-                                            <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/10 transition-colors rounded-lg pointer-events-none" />
-                                            <span className="absolute bottom-1 right-1 bg-black/50 text-white text-[9px] px-1 rounded backdrop-blur-sm flex items-center gap-1">
-                                                <FileImage size={9} /> Image
+                                            <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/5 transition-colors rounded-xl pointer-events-none" />
+                                            <span className="absolute bottom-1.5 right-1.5 bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded-md backdrop-blur-md flex items-center gap-1 font-medium shadow-sm">
+                                                <FileImage size={10} /> Image
                                             </span>
                                         </div>
                                     ) : item.type === 'Post' ? (
                                         <span className="text-xs text-slate-400 italic">No attachment</span>
                                     ) : (
                                         // Context for Comment
-                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 max-w-xs">
+                                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/60 max-w-xs">
                                             <div className="flex items-center gap-1.5 text-[10px] font-bold text-indigo-500 mb-1 uppercase tracking-wide">
                                                 <CornerDownRight size={10} /> In reply to
                                             </div>
-                                            <p className="text-xs text-slate-500 italic line-clamp-2 border-l-2 border-slate-200 pl-2">
+                                            <p className="text-xs text-slate-500 italic line-clamp-2 border-l-2 border-indigo-200 pl-2">
                                                 &quot;{item.parentPostContent}&quot;
                                             </p>
                                         </div>
@@ -372,15 +376,18 @@ export default function Community() {
                                 </td>
 
                                 {/* DATE */}
-                                <td className="px-6 py-5 text-sm text-slate-500 align-top whitespace-nowrap">
-                                    {formatDate(item.created_at)}
+                                <td className="px-6 py-5 align-top whitespace-nowrap">
+                                    <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
+                                        <Calendar size={14} className="text-slate-400" />
+                                        {formatDate(item.created_at)}
+                                    </div>
                                 </td>
 
                                 {/* ACTIONS */}
                                 <td className="px-8 py-5 text-right align-top">
                                     <button 
                                         onClick={() => handleDeleteTrigger(item)}
-                                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 rounded-xl transition-all group/del"
+                                        className="p-2.5 text-slate-400 bg-white border border-slate-200 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-100 rounded-xl transition-all shadow-sm group/del"
                                         title={`Delete ${item.type}`}
                                     >
                                         <Trash2 size={18} className="group-hover/del:scale-110 transition-transform" />

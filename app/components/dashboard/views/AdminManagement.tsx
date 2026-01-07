@@ -7,9 +7,10 @@ import {
   AlertOctagon, 
   Loader2, 
   RefreshCw, 
-  Lock,
-  ChevronRight,
-  Calendar
+  Calendar,
+  ShieldCheck,
+  UserCog,
+  Hash
 } from 'lucide-react';
 import { User } from '@/types';
 
@@ -17,6 +18,7 @@ import { User } from '@/types';
 import DeleteModal from '../shared/DeleteModal';
 import AdminModal, { AdminFormData } from '../shared/AdminModal';
 
+// Interface sesuai struktur DB & Respon API
 interface ApiAdminResponse {
   id: number;
   username: string;
@@ -40,10 +42,7 @@ export default function AdminManagement() {
   const getInitials = (name: string) => {
     if (!name) return '??';
     return name
-      .split(/[\s._]/)
-      .map((n) => n[0])
-      .slice(0, 2)
-      .join('')
+      .substring(0, 2)
       .toUpperCase();
   };
 
@@ -65,8 +64,8 @@ export default function AdminManagement() {
         const mappedAdmins: User[] = result.data.map((item: ApiAdminResponse) => ({
           id: item.id,
           name: item.username,
-          email: '', // Email dikosongkan karena tidak ingin ditampilkan
-          role: item.role || 'Moderator',
+          email: '', 
+          role: item.role || 'ADMIN', 
           joined: new Date(item.created_at).toLocaleDateString('en-GB', { 
             day: 'numeric', 
             month: 'short', 
@@ -87,9 +86,18 @@ export default function AdminManagement() {
     fetchAdmins();
   }, []);
 
-  const filteredAdmins = admins.filter(admin => 
-    admin.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // --- HELPER: REFRESH ---
+  const handleRefresh = () => {
+    fetchAdmins();
+  };
+
+  // --- FILTERING ---
+  const filteredAdmins = admins.filter(admin => {
+    const matchesSearch = admin.name.toLowerCase().includes(searchTerm.toLowerCase());
+    // Filter Super Admin agar tidak muncul (Sesuai request)
+    const isNotSuperAdmin = admin.role !== 'SUPER_ADMIN' && admin.role !== 'Super Admin';
+    return matchesSearch && isNotSuperAdmin;
+  });
 
   const handleAddAdmin = async (formData: AdminFormData) => {
     setIsLoading(true);
@@ -126,7 +134,6 @@ export default function AdminManagement() {
   };
 
   const handleDeleteClick = (admin: User) => {
-    if (admin.role === 'Super Admin') return;
     setSelectedAdmin(admin);
     setIsDeleteOpen(true);
   };
@@ -156,26 +163,29 @@ export default function AdminManagement() {
   };
 
   return (
+    // FIX: Padding dihapus di sini karena sudah ada di ContentWrapper parent.
     <div className="space-y-8 animate-[fade-in_0.5s_ease-out]">
       
       {/* 1. HERO HEADER */}
       <div className="relative overflow-hidden rounded-3xl bg-slate-900 p-10 text-white shadow-2xl shadow-indigo-900/20">
-        <div className="absolute top-0 right-0 -mr-20 -mt-20 h-80 w-80 rounded-full bg-indigo-500/20 blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 h-60 w-60 rounded-full bg-rose-500/10 blur-3xl"></div>
+        {/* Decorative Blobs (Slate & Cyan theme for Security) */}
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 h-80 w-80 rounded-full bg-cyan-500/20 blur-3xl pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 h-60 w-60 rounded-full bg-slate-500/10 blur-3xl pointer-events-none"></div>
         
         <div className="relative z-10 flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
-          <div className="space-y-3">
+          <div className="space-y-2">
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 shadow-inner">
-                <Shield className="h-6 w-6 text-indigo-300" />
+                <ShieldCheck className="h-6 w-6 text-cyan-300" />
               </div>
               <h2 className="text-3xl font-bold tracking-tight text-white">Admin Privileges</h2>
             </div>
             <p className="max-w-xl text-slate-300 text-sm leading-relaxed">
-              Manage system administrators and monitor security permissions for the platform.
+              Manage system administrators and monitor security permissions. Grant or revoke access levels for the platform.
             </p>
-            <div className="inline-flex items-center gap-2 rounded-full bg-amber-500/10 px-3 py-1.5 text-[11px] font-bold text-amber-300 border border-amber-500/20 uppercase tracking-wider">
-              <AlertOctagon size={14}/> 
+            
+            <div className="inline-flex items-center gap-2 rounded-lg bg-amber-500/10 px-3 py-1.5 text-[10px] font-bold text-amber-300 border border-amber-500/20 uppercase tracking-wider mt-2">
+              <AlertOctagon size={12}/> 
               <span>Authorized Personnel Only</span>
             </div>
           </div>
@@ -183,9 +193,9 @@ export default function AdminManagement() {
           <button 
             onClick={() => setIsAddModalOpen(true)} 
             disabled={isLoading}
-            className="group flex items-center gap-3 rounded-2xl bg-white px-6 py-4 text-sm font-bold text-slate-900 shadow-xl transition-all hover:bg-indigo-50 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70"
+            className="group flex items-center gap-3 rounded-2xl bg-white px-5 py-3.5 text-sm font-bold text-slate-900 shadow-xl transition-all hover:bg-cyan-50 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 border border-transparent hover:border-cyan-100"
           >
-            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-white group-hover:bg-indigo-700 transition-colors">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-white group-hover:bg-cyan-600 transition-colors">
               <Plus size={14} strokeWidth={3} />
             </div>
             <span>Add Administrator</span>
@@ -195,30 +205,34 @@ export default function AdminManagement() {
 
       {/* 2. TOOLBAR */}
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+        {/* Search */}
         <div className="relative w-full md:w-96 group">
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-600 transition-colors pointer-events-none">
             <Search size={20} />
           </div>
           <input 
             type="text" 
-            placeholder="Search by name..." 
+            placeholder="Search administrator..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full rounded-2xl border border-slate-200 bg-white py-4 pl-12 pr-4 text-sm font-medium text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm"
+            className="w-full rounded-2xl border border-slate-200 bg-white py-3.5 pl-12 pr-4 text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:border-cyan-500 focus:outline-none focus:ring-4 focus:ring-cyan-500/10 transition-all shadow-sm"
           />
         </div>
 
         <div className="flex items-center gap-3 w-full md:w-auto">
+          {/* Refresh Button */}
           <button 
-            onClick={fetchAdmins} 
-            className="flex items-center gap-2 px-4 py-3.5 text-slate-600 bg-white border border-slate-200 hover:text-indigo-600 hover:border-indigo-200 rounded-2xl transition-all shadow-sm font-bold text-xs"
+            onClick={handleRefresh} 
+            disabled={isFetching}
+            className="p-3.5 text-slate-500 bg-white border border-slate-200 hover:text-cyan-600 hover:border-cyan-200 hover:bg-cyan-50 rounded-2xl transition-all shadow-sm disabled:opacity-70 disabled:cursor-not-allowed group"
+            title="Refresh List"
           >
-            <RefreshCw size={16} className={isFetching ? "animate-spin" : ""} />
-            Refresh
+            <RefreshCw size={18} className={`transition-transform ${isFetching ? "animate-spin" : "group-hover:rotate-180"}`} />
           </button>
-          <div className="h-10 w-px bg-slate-200 mx-1 hidden md:block"></div>
-          <div className="px-4 py-2 rounded-xl bg-slate-100 border border-slate-200">
-            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-tight">Total Staff</p>
+          
+          {/* Stats Pill */}
+          <div className="px-5 py-3 rounded-2xl bg-white border border-slate-200 text-center min-w-30 shadow-sm">
+            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Total Staff</p>
             <p className="text-sm font-black text-slate-800">{filteredAdmins.length} Admins</p>
           </div>
         </div>
@@ -231,18 +245,18 @@ export default function AdminManagement() {
             <thead>
               <tr className="bg-slate-50/80 text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-100">
                 <th className="px-8 py-5">Administrator</th>
-                <th className="px-6 py-5">Security Role</th>
-                <th className="px-6 py-5">Access Granted</th>
+                <th className="px-6 py-5">Access Level</th>
+                <th className="px-6 py-5">Account Created</th>
                 <th className="px-8 py-5 text-right">Management</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {isFetching ? (
                 <tr>
-                  <td colSpan={4} className="py-32 text-center">
-                    <div className="flex flex-col items-center justify-center gap-4">
-                      <Loader2 size={40} className="animate-spin text-indigo-600" />
-                      <p className="text-sm font-bold text-slate-500 tracking-wide">Synchronizing Database...</p>
+                  <td colSpan={4} className="px-6 py-24 text-center">
+                    <div className="flex flex-col items-center justify-center gap-3 text-slate-400">
+                      <Loader2 size={32} className="animate-spin text-cyan-600" />
+                      <p className="text-sm font-medium">Synchronizing Database...</p>
                     </div>
                   </td>
                 </tr>
@@ -250,10 +264,11 @@ export default function AdminManagement() {
                 <tr>
                   <td colSpan={4} className="px-6 py-24 text-center">
                     <div className="flex flex-col items-center justify-center text-slate-400">
-                      <div className="p-6 bg-slate-50 rounded-full mb-4">
-                        <Shield size={40} className="opacity-20" />
+                      <div className="p-4 bg-slate-50 rounded-full mb-3">
+                        <UserCog size={32} className="opacity-40" />
                       </div>
                       <p className="text-lg font-bold text-slate-600">No admins found</p>
+                      <p className="text-sm">Try adjusting your search criteria.</p>
                     </div>
                   </td>
                 </tr>
@@ -263,18 +278,19 @@ export default function AdminManagement() {
                     {/* Administrator Profile */}
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-4">
-                        <div className="relative h-11 w-11 flex items-center justify-center overflow-hidden rounded-xl bg-linear-to-br from-slate-700 to-slate-900 shadow-md text-white font-bold text-xs shrink-0 ring-2 ring-white">
+                        <div className="relative h-11 w-11 flex items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-slate-700 to-slate-900 shadow-md text-white font-bold text-xs shrink-0 ring-2 ring-white border border-slate-100">
                           {getInitials(admin.name)}
                         </div>
                         
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="text-sm font-bold text-slate-800 capitalize group-hover:text-indigo-600 transition-colors">
+                            <p className="text-sm font-bold text-slate-800 capitalize group-hover:text-cyan-700 transition-colors">
                               {admin.name}
                             </p>
-                            {admin.role === 'Super Admin' && (
-                              <span className="rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-black text-amber-600 border border-amber-500/20">MASTER</span>
-                            )}
+                          </div>
+                          <div className="flex items-center gap-1 text-[10px] text-slate-400 font-medium">
+                             <Hash size={10} />
+                             ID: {admin.id.toString().padStart(4, '0')}
                           </div>
                         </div>
                       </div>
@@ -282,12 +298,8 @@ export default function AdminManagement() {
                     
                     {/* Role Level */}
                     <td className="px-6 py-5">
-                      <div className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-[11px] font-bold border transition-all ${
-                        admin.role === 'Super Admin' 
-                          ? 'bg-indigo-50 text-indigo-700 border-indigo-100 shadow-sm shadow-indigo-100'
-                          : 'bg-slate-50 text-slate-600 border-slate-200'
-                      }`}>
-                        <Shield size={14} className={admin.role === 'Super Admin' ? "text-indigo-500" : "text-slate-400"} /> 
+                      <div className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-[11px] font-bold border transition-all bg-slate-100 text-slate-600 border-slate-200">
+                        <Shield size={12} className="text-slate-400" /> 
                         {admin.role.toUpperCase()}
                       </div>
                     </td>
@@ -295,7 +307,7 @@ export default function AdminManagement() {
                     {/* Joined Date */}
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
-                        <Calendar size={14} className="opacity-50" />
+                        <Calendar size={14} className="text-slate-400" />
                         {admin.joined}
                       </div>
                     </td>
@@ -303,16 +315,10 @@ export default function AdminManagement() {
                     {/* Actions */}
                     <td className="px-8 py-5 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {admin.role === 'Super Admin' ? (
-                          <div className="flex items-center gap-2 px-3 py-2 text-slate-400 bg-slate-50 rounded-xl border border-slate-100" title="Protected Account">
-                            <Lock size={14} />
-                            <span className="text-[10px] font-bold uppercase">Locked</span>
-                          </div>
-                        ) : (
                           <button 
                             onClick={() => handleDeleteClick(admin)}
                             disabled={isLoading}
-                            className="p-2.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 transition-all duration-200 group/del"
+                            className="p-2.5 rounded-xl text-slate-400 bg-white border border-slate-200 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-100 transition-all duration-200 group/del shadow-sm"
                             title="Revoke Admin Access"
                           >
                             {isLoading && selectedAdmin?.id === admin.id ? (
@@ -321,10 +327,6 @@ export default function AdminManagement() {
                               <Trash2 size={18} className="group-hover/del:scale-110 transition-transform" />
                             )}
                           </button>
-                        )}
-                        <div className="p-1 text-slate-200 group-hover:text-slate-300 transition-colors">
-                            <ChevronRight size={18} />
-                        </div>
                       </div>
                     </td>
                   </tr>
@@ -347,7 +349,7 @@ export default function AdminManagement() {
         onClose={() => setIsDeleteOpen(false)}
         onConfirm={handleConfirmDelete}
         title="Revoke Admin Access?"
-        message="This will immediately terminate all administrative privileges for"
+        message="This will immediately terminate all administrative privileges for this user. This action cannot be undone."
         itemName={selectedAdmin?.name || 'this admin'}
         isDeleting={isLoading}
       />
